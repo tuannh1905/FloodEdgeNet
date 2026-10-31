@@ -48,7 +48,7 @@ def set_seed(seed):
         os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
     torch.use_deterministic_algorithms(False)
     warnings.filterwarnings("ignore", category=UserWarning)
-    print(f"✓ Seed set to {seed}")
+    print(f"[OK] Seed set to {seed}")
 
 
 def download_dataset(name):
@@ -64,7 +64,7 @@ def download_dataset(name):
     with zipfile.ZipFile(output, "r") as z:
         z.extractall(folder)
     os.remove(output)
-    print(f"✓ {name} ready.")
+    print(f"[OK] {name} ready.")
 
 
 class FloodSceneFullDataset(Dataset):
@@ -368,7 +368,8 @@ def calculate_model_complexity(model, input_size=(1, 3, 256, 256), device="cuda"
             batch_size = input[0].size(0)
             out_h = output.size(2)
             out_w = output.size(3)
-            kernel_ops = module.kernel_size[0] * module.kernel_size[1] * module.in_channels
+            cin_per_group = module.in_channels // module.groups
+            kernel_ops = module.kernel_size[0] * module.kernel_size[1] * cin_per_group
             total_ops += batch_size * kernel_ops * out_h * out_w * module.out_channels
         elif isinstance(module, torch.nn.Linear):
             batch_size = input[0].size(0)
@@ -384,13 +385,15 @@ def calculate_model_complexity(model, input_size=(1, 3, 256, 256), device="cuda"
     for hook in hooks:
         hook.remove()
 
-    gflops = total_ops / 1e9
+    gmacs = total_ops / 1e9
+    gflops = (total_ops * 2) / 1e9
 
     return {
         "total_params": total_params,
         "trainable_params": trainable_params,
         "model_size_mb": model_size_mb,
         "memory_mb": memory_allocated,
+        "gmacs": gmacs,
         "gflops": gflops,
     }
 
@@ -444,7 +447,7 @@ def train_floodscene(model_name, loss_name, size, epochs, batch_size, lr,
     train_loader, val_loader, test_loader = get_dataloaders(
         dataset_path=dataset_path, batch_size=batch_size, size=size, seed=seed
     )
-    print(f"✓ DataLoaders ready")
+    print(f"[OK] DataLoaders ready")
     print(f"  Train: {len(train_loader)} batches | Val: {len(val_loader)} | Test: {len(test_loader)}")
 
     set_seed(seed)
@@ -455,7 +458,7 @@ def train_floodscene(model_name, loss_name, size, epochs, batch_size, lr,
 
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"✓ Model: {model_name} | Params: {total_params:,} | Trainable: {trainable_params:,}")
+    print(f"[OK] Model: {model_name} | Params: {total_params:,} | Trainable: {trainable_params:,}")
 
     print(f"\n{'='*70}")
     print("MODEL COMPLEXITY ANALYSIS")
@@ -484,7 +487,7 @@ def train_floodscene(model_name, loss_name, size, epochs, batch_size, lr,
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, fused=False)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
 
-    print(f"✓ Loss: {loss_name} | Optimizer: Adam | LR: {lr}")
+    print(f"[OK] Loss: {loss_name} | Optimizer: Adam | LR: {lr}")
 
     os.makedirs(output_path, exist_ok=True)
     save_path = os.path.join(output_path, f"{model_name}_{loss_name}_floodscene_full_s{seed}.pth")
@@ -565,7 +568,7 @@ def train_floodscene(model_name, loss_name, size, epochs, batch_size, lr,
                 },
             }
             torch.save(checkpoint, save_path, _use_new_zipfile_serialization=True)
-            print(" ✓ Best")
+            print(" [OK] Best")
         else:
             print()
 

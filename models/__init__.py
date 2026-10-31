@@ -4,7 +4,7 @@ import importlib
 import inspect
 
 
-def get_model(model_name, num_classes=1, seed=None, input_size=256):
+def get_model(model_name, num_classes=1, seed=None, input_size=256, pretrained=False):
     """
     Initialize model with DETERMINISTIC weights.
 
@@ -12,14 +12,13 @@ def get_model(model_name, num_classes=1, seed=None, input_size=256):
         model_name: Name of model architecture
         num_classes: Number of output classes
         seed:        Random seed (REQUIRED for reproducibility)
-        input_size:  Input image size — phải chia hết cho 16
-                     Truyền vào build_model nếu model hỗ trợ tham số này.
+        input_size:  Input image size (phải chia hết cho 16)
+        pretrained:  Load pretrained backbone weights if supported (e.g. ImageNet for heavy baselines)
     """
-    # ✓ Validate input_size sớm, trước khi load bất cứ thứ gì
     if input_size % 16 != 0:
         raise ValueError(
             f"input_size={input_size} phải chia hết cho 16 "
-            f"(do 4 lớp MaxPool2d×2 trong encoder)."
+            f"(do các tầng Downsampling trong encoder)."
         )
 
     model_file = os.path.join(os.path.dirname(__file__), f'{model_name}.py')
@@ -34,7 +33,7 @@ def get_model(model_name, num_classes=1, seed=None, input_size=256):
             f"Available: {', '.join(sorted(available))}"
         )
 
-    # ✓ Set seed TRƯỚC khi khởi tạo model để weight init deterministic
+    # Deterministic weight init
     if seed is not None:
         torch.manual_seed(seed)
         if torch.cuda.is_available():
@@ -43,15 +42,16 @@ def get_model(model_name, num_classes=1, seed=None, input_size=256):
 
     module = importlib.import_module(f'models.{model_name}')
 
-    # ✓ Dùng inspect để kiểm tra build_model có nhận input_size không
-    #   → Tương thích ngược với các model cũ không có tham số này
     sig = inspect.signature(module.build_model)
+    kwargs = {'num_classes': num_classes}
     if 'input_size' in sig.parameters:
-        model = module.build_model(num_classes=num_classes, input_size=input_size)
-    else:
-        model = module.build_model(num_classes=num_classes)
+        kwargs['input_size'] = input_size
+    if 'pretrained' in sig.parameters:
+        kwargs['pretrained'] = pretrained
+
+    model = module.build_model(**kwargs)
 
     if seed is not None:
-        print(f"✓ Model '{model_name}' initialized with seed {seed}")
+        print(f"[OK] Model '{model_name}' initialized with seed {seed} (pretrained={pretrained})")
 
     return model

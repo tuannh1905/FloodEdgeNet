@@ -61,19 +61,19 @@ class ResNetDilated(nn.Module):
 
     def _make_layer(self, block, planes, blocks, stride=1, dilation=1):
         downsample = None
-        # Xử lý downsample cho nhánh shortcut
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
                 nn.Conv2d(self.inplanes, planes * block.expansion,
                           kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(planes * block.expansion),
             )
+
         layers = []
-        # Lớp đầu tiên của block có thể thay đổi stride và apply 1/2 dilation
-        layers.append(block(self.inplanes, planes, stride, dilation=1 if dilation == 1 else dilation//2, downsample=downsample))
+        layers.append(block(self.inplanes, planes, stride, dilation, downsample))
         self.inplanes = planes * block.expansion
         for _ in range(1, blocks):
             layers.append(block(self.inplanes, planes, dilation=dilation))
+
         return nn.Sequential(*layers)
 
     def forward(self, x):
@@ -81,6 +81,7 @@ class ResNetDilated(nn.Module):
         x = self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)
+
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
@@ -88,30 +89,30 @@ class ResNetDilated(nn.Module):
         return x
 
 # ==============================================================================
-# 2. KHỐI ASPP (Atrous Spatial Pyramid Pooling)
+# 2. ATROUS SPATIAL PYRAMID POOLING (ASPP)
 # ==============================================================================
 class ASPPConv(nn.Sequential):
     def __init__(self, in_channels, out_channels, dilation):
         modules = [
             nn.Conv2d(in_channels, out_channels, 3, padding=dilation, dilation=dilation, bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU()
+            nn.ReLU(inplace=True)
         ]
         super(ASPPConv, self).__init__(*modules)
 
 class ASPPPooling(nn.Sequential):
     def __init__(self, in_channels, out_channels):
         super(ASPPPooling, self).__init__(
-            nn.AdaptiveAvgPool2d(1), # Sức mạnh động của DeepLab, giữ nguyên không tĩnh hóa
+            nn.AdaptiveAvgPool2d(1),
             nn.Conv2d(in_channels, out_channels, 1, bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU())
+            nn.ReLU(inplace=True)
+        )
 
     def forward(self, x):
         size = x.shape[-2:]
         for mod in self:
             x = mod(x)
-        # Resize động lại bằng kích thước feature map hiện tại
         return F.interpolate(x, size=size, mode='bilinear', align_corners=False)
 
 class ASPPModule(nn.Module):
@@ -119,27 +120,29 @@ class ASPPModule(nn.Module):
         super(ASPPModule, self).__init__()
         modules = []
         
-        # 1x1 Conv branch
+        # 1. 1x1 Conv
         modules.append(nn.Sequential(
             nn.Conv2d(in_channels, out_channels, 1, bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU()))
+            nn.ReLU(inplace=True)
+        ))
 
-        # Atrous Conv branches
+        # 2. Ba nhánh 3x3 Dilated Conv với rates khác nhau
         for rate in atrous_rates:
             modules.append(ASPPConv(in_channels, out_channels, rate))
 
-        # Image Pooling branch
+        # 3. Image Pooling (Global Context)
         modules.append(ASPPPooling(in_channels, out_channels))
 
         self.convs = nn.ModuleList(modules)
 
-        # Concatenate & Project
+        # 4. Chiếu tổng hợp (Project)
         self.project = nn.Sequential(
             nn.Conv2d(len(self.convs) * out_channels, out_channels, 1, bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU(),
-            nn.Dropout(0.5))
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5)
+        )
 
     def forward(self, x):
         res = []
@@ -152,10 +155,9 @@ class ASPPModule(nn.Module):
 # 3. DEEPLAB V3 CHÍNH
 # ==============================================================================
 class DeepLabV3Model(nn.Module):
-    def __init__(self, num_classes=1, backbone='resnet50', output_stride=16, input_size=256):
+    def __init__(self, num_classes=1, backbone='resnet50', output_stride=16, input_size=256, pretrained=False):
         super(DeepLabV3Model, self).__init__()
 
-        # ✓ KIỂM TRA TOÁN HỌC: Output stride = 16 yêu cầu input chia hết cho 16
         if input_size % 16 != 0:
             raise ValueError(f"DeepLabV3 yêu cầu input_size chia hết cho 16. Kích thước {input_size} không hợp lệ.")
 
@@ -166,6 +168,16 @@ class DeepLabV3Model(nn.Module):
         else:
             raise NotImplementedError("Backbone chưa được hỗ trợ.")
 
+        if pretrained and backbone == 'resnet50':
+            try:
+                import torchvision.models as tv_models
+                weights = tv_models.ResNet50_Weights.DEFAULT
+                pt_model = tv_models.resnet50(weights=weights)
+                self.backbone.load_state_dict(pt_model.state_dict(), strict=False)
+                print("[OK] Loaded torchvision ResNet-50 ImageNet pretrained weights into DeepLabV3 backbone")
+            except Exception as e:
+                print(f"! Warning: Failed to load pretrained weights ({e}). Initialized randomly.")
+
         in_channels = 2048
         if output_stride == 16:
             atrous_rates = [6, 12, 18]
@@ -173,31 +185,22 @@ class DeepLabV3Model(nn.Module):
             atrous_rates = [12, 24, 36]
 
         self.aspp = ASPPModule(in_channels, atrous_rates)
-
         self.classifier = nn.Conv2d(256, num_classes, 1)
 
     def forward(self, x):
         size = x.shape[-2:]
-        
-        # 1. Extract Features
         x = self.backbone(x)
-        
-        # 2. Atrous Spatial Pyramid Pooling
         x = self.aspp(x)
-        
-        # 3. Logits (1x1 Conv)
         x = self.classifier(x)
-        
-        # 4. Bilinear Upsample thẳng lên kích thước ảnh gốc (DeepLabV3 nguyên thủy)
         x = F.interpolate(x, size=size, mode='bilinear', align_corners=True)
         return x
 
 # ==============================================================================
 # 4. TEMPLATE BUILD MODEL
 # ==============================================================================
-def build_model(num_classes=1, input_size=256):
+def build_model(num_classes=1, input_size=256, pretrained=False):
     """
     Khởi tạo DeepLabV3 chuẩn với backbone ResNet-50.
     Cực kỳ thích hợp làm model đối chứng (heavy baseline).
     """
-    return DeepLabV3Model(num_classes=num_classes, backbone='resnet50', output_stride=16, input_size=input_size)
+    return DeepLabV3Model(num_classes=num_classes, backbone='resnet50', output_stride=16, input_size=input_size, pretrained=pretrained)
