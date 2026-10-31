@@ -42,7 +42,7 @@ pip install -r requirements.txt
 
 ## 🚀 Quick Start
 
-### 1. Training Proposed Model (`fsenet` / `minilitev11`)
+### 1. Training Proposed Model (`fsenet`)
 ```bash
 # Single-seed training
 python main.py \
@@ -117,7 +117,7 @@ All major real-time and heavy segmentation baselines are supported:
 
 | Category | Model Name | Description |
 | :--- | :--- | :--- |
-| **Proposed** | `fsenet` / `minilitev11` | Ultra-lightweight edge flood segmentation network (~0.14M deployable params) |
+| **Proposed** | `fsenet` | Ultra-lightweight edge flood segmentation network (~0.14M deployable params) |
 | **Lightweight Baselines** | `fast-scnn`, `espnetv2`, `stdc1`, `dabnet`, `edanet`, `enet`, `ulite` | Real-time edge architectures |
 | **Classic Baselines** | `unet`, `segnet` | Canonical segmentation backbones |
 | **Heavy Baselines** | `deeplabv3`, `segformer` | Deep baselines (supports `--pretrained` for ImageNet backbone initialization) |
@@ -165,7 +165,6 @@ MambaFloodLite/
 ├── analyze.py                  # Grad-CAM and Best/Worst prediction analyzer
 ├── models/
 │   ├── fsenet.py               # Proposed FSENet architecture (clean reference)
-│   ├── minilitev11.py          # Proposed architecture (v11 experimental variant)
 │   ├── deeplabv3.py            # DeepLabV3 (supports --pretrained)
 │   ├── segformer.py            # SegFormer MiT backbone
 │   ├── unet.py, segnet.py      # Classic baselines

@@ -56,3 +56,4 @@ class FSENetAuxS1(nn.Module):
 
 def build_model(num_classes: int = 1, **kwargs) -> FSENetAuxS1:
     return FSENetAuxS1(num_classes=num_classes, **kwargs)
+

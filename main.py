@@ -111,7 +111,7 @@ def main():
     parser.add_argument('--dataset', type=str, default='floodkaggle',
                         choices=['floodvn', 'floodkaggle', 'floodscene', 'floodnet'])
     parser.add_argument('--model', type=str, default='fsenet',
-                        help="Model architecture name (e.g. fsenet, minilitev11, unet, deeplabv3, etc.)")
+                        help="Model architecture name (e.g. fsenet, unet, deeplabv3, etc.)")
     parser.add_argument('--size', type=int, default=256, help="Input image dimension (default: 256)")
     parser.add_argument('--num_classes', type=int, default=None,
                         help="Number of classes (default: 1 for floodvn/floodkaggle, 4 for floodscene, 10 for floodnet)")
@@ -188,3 +188,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

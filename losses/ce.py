@@ -31,3 +31,4 @@ def build_ce_loss(num_classes=4):
 
 def build_ce_dice_loss(num_classes=4):
     return CrossEntropyDiceLoss(num_classes=num_classes)
+
