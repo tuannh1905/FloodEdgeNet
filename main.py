@@ -105,7 +105,7 @@ def run_cross_dataset_evaluation(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="MambaFloodLite Unified Training & Evaluation Framework")
+    parser = argparse.ArgumentParser(description="FloodEdgeNet Unified Training & Evaluation Framework")
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'cross_eval'],
                         help="Execution mode: 'train' (normal/multi-seed training) or 'cross_eval' (domain transfer evaluation)")
     parser.add_argument('--dataset', type=str, default='floodkaggle',

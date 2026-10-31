@@ -1,6 +1,6 @@
-# 🌊 Flood Segmentation Research Framework (Paper-Ready Suite)
+# 🌊 FloodEdgeNet: Ultra-Lightweight Flood Segmentation for Edge & MCU Deployment
 
-A research-grade training and benchmarking framework for flood segmentation with **strict determinism**, **comprehensive evaluation metrics**, and **cross-dataset domain transfer** using PyTorch.
+A research-grade training, quantization, and benchmarking framework for flood segmentation with **strict determinism**, **comprehensive paper evaluation metrics**, and **cross-dataset domain transfer** using PyTorch.
 
 ---
 
@@ -32,8 +32,8 @@ A research-grade training and benchmarking framework for flood segmentation with
 
 ```bash
 # Clone repository
-git clone https://github.com/tuannh1905/MambaFloodLite.git
-cd MambaFloodLite
+git clone https://github.com/tuannh1905/FloodEdgeNet.git
+cd FloodEdgeNet
 
 # Install dependencies
 pip install -r requirements.txt
@@ -181,7 +181,7 @@ FPS:  $124.50 \pm 2.10$
 ## 📁 Project Structure
 
 ```
-MambaFloodLite/
+FloodEdgeNet/
 ├── main.py                     # Unified CLI entry point (train, multiseed, cross-eval)
 ├── qat.py                      # Quantization-Aware Training engine for MCU deployment
 ├── cross_dataset_eval.py       # Cross-dataset generalization benchmark tool
