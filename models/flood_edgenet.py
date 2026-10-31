@@ -194,3 +194,4 @@ FSENet = FloodEdgeNet
 
 def build_model(num_classes: int = 1, **kwargs) -> FloodEdgeNet:
     return FloodEdgeNet(num_classes=num_classes, **kwargs)
+

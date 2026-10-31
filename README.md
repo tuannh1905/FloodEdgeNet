@@ -10,6 +10,7 @@ A research-grade training and benchmarking framework for flood segmentation with
 - [Quick Start](#-quick-start)
 - [Paper Evaluation Metrics](#-paper-evaluation-metrics)
 - [Cross-Dataset Generalization (Item 5)](#-cross-dataset-generalization)
+- [Quantization-Aware Training (QAT)](#-quantization-aware-training-qat-for-mcu-deployment)
 - [Baseline Models & Pretrained Options (Item 1)](#-baseline-models--pretrained-options)
 - [Multi-Seed Experiments](#-multi-seed-experiments)
 - [Project Structure](#-project-structure)
@@ -91,8 +92,8 @@ Evaluate zero-shot transferability across flood datasets:
 ```bash
 # Standalone evaluation across domains:
 python cross_dataset_eval.py \
-  --model fsenet \
-  --weights outputs/fsenet_bce_floodkaggle_s42.pth \
+  --model flood_edgenet \
+  --weights outputs/flood_edgenet_bce_floodkaggle_s42.pth \
   --source_dataset floodkaggle \
   --target_datasets floodkaggle floodscene floodvn
 ```
@@ -101,13 +102,36 @@ Or via `main.py`:
 ```bash
 python main.py \
   --mode cross_eval \
-  --model fsenet \
-  --weights outputs/fsenet_bce_floodkaggle_s42.pth \
+  --model flood_edgenet \
+  --weights outputs/flood_edgenet_bce_floodkaggle_s42.pth \
   --source_dataset floodkaggle \
   --target_datasets floodkaggle floodscene
 ```
 
 Output includes a consolidated summary table and formatted **LaTeX code** ready for pasting into the paper!
+
+---
+
+## ⚡ Quantization-Aware Training (QAT) for MCU Deployment
+
+Perform Integer-Only (INT8) QAT fine-tuning starting from pretrained FP32 weights, optimizing for ARM Cortex-M microcontrollers (CMSIS-NN / TFLite Micro):
+
+```bash
+# Run QAT fine-tuning and integer conversion:
+python qat.py \
+  --weights outputs/flood_edgenet_bce_floodkaggle_s42.pth \
+  --model flood_edgenet \
+  --dataset floodkaggle \
+  --epochs 15 \
+  --lr 0.0001 \
+  --optimizer sgd
+```
+
+**Key Features of `qat.py`:**
+- **Fair Benchmark Comparison**: Strictly evaluates the base FP32 model and True INT8 model on the identical test set.
+- **Hardware Profile Estimation**: Accurately computes Flash footprint reduction (-75%) and Peak SRAM buffer savings.
+- **Freeze BN/Observer Phase**: Locks scales in the final epochs for rock-solid integer convergence.
+- **Automated LaTeX Code Generation**: Prints formatted LaTeX tables comparing FP32 vs INT8 QAT.
 
 ---
 
@@ -159,6 +183,7 @@ FPS:  $124.50 \pm 2.10$
 ```
 MambaFloodLite/
 ├── main.py                     # Unified CLI entry point (train, multiseed, cross-eval)
+├── qat.py                      # Quantization-Aware Training engine for MCU deployment
 ├── cross_dataset_eval.py       # Cross-dataset generalization benchmark tool
 ├── benchmark.py                # Binary benchmark engine
 ├── benchmark_floodscene.py     # Multi-class benchmark engine
