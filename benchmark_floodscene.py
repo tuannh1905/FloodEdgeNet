@@ -26,9 +26,13 @@ NUM_CLASSES = 4
 CLASS_NAMES = ["background", "sky", "building", "flood"]
 
 DATASETS = {
+    "aifloodsense": {
+        "id": "12f0UmV46uwzjMyYPpfc_S0fHLRe4LKIf",
+        "dir": "aifloodsense",
+    },
     "floodscene": {
         "id": "12f0UmV46uwzjMyYPpfc_S0fHLRe4LKIf",
-        "dir": "floodscene",
+        "dir": "aifloodsense",
     }
 }
 
@@ -106,16 +110,6 @@ class FloodSceneFullDataset(Dataset):
 
     def __getitem__(self, idx):
         img_name = self.images[idx]
-
-        worker_info = torch.utils.data.get_worker_info()
-        worker_id = worker_info.id if worker_info is not None else 0
-
-        filename_hash = hash(img_name) % 1000000
-        sample_seed = self.seed + filename_hash + worker_id * 10000000
-
-        np.random.seed(sample_seed)
-        random.seed(sample_seed)
-        torch.manual_seed(sample_seed)
 
         img_path = os.path.join(self.images_dir, img_name)
         image = cv2.imread(img_path)
@@ -781,7 +775,7 @@ def run_multiseed_experiments(args, seeds):
 def main():
     parser = argparse.ArgumentParser(description="FloodScene Full Multi-Class Benchmark")
     parser.add_argument("--dataset", type=str, default="floodscene",
-                        choices=["floodscene"])
+                        choices=["aifloodsense", "floodscene"])
     parser.add_argument("--model", type=str, required=True)
     parser.add_argument("--size", type=int, default=256)
     parser.add_argument("--loss", type=str, default="bce_dice")

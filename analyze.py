@@ -152,7 +152,7 @@ def process_and_save_cases(cases, prefix, grad_cam, device, output_dir):
 def main():
     parser = argparse.ArgumentParser(description='Analyze Best/Worst Predictions and Grad-CAM')
     # Mở rộng choices để bao gồm cả floodscene theo chuẩn Dataloader mới
-    parser.add_argument('--dataset', type=str, default='floodkaggle', choices=['floodvn', 'floodkaggle', 'floodscene'])
+    parser.add_argument('--dataset', type=str, default='floodkaggle', choices=['floodvn', 'floodkaggle', 'aifloodsense', 'floodscene'])
     parser.add_argument('--model', type=str, required=True, help='Tên model (vd: minilightv1)')
     parser.add_argument('--weights', type=str, required=True, help='Đường dẫn tới file .pth')
     parser.add_argument('--size', type=int, default=256)

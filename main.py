@@ -109,12 +109,12 @@ def main():
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'cross_eval'],
                         help="Execution mode: 'train' (normal/multi-seed training) or 'cross_eval' (domain transfer evaluation)")
     parser.add_argument('--dataset', type=str, default='floodkaggle',
-                        choices=['floodvn', 'floodkaggle', 'floodscene', 'floodnet'])
+                        choices=['floodvn', 'floodkaggle', 'aifloodsense', 'floodscene'])
     parser.add_argument('--model', type=str, default='flood_edgenet',
                         help="Model architecture name (e.g. flood_edgenet, unet, deeplabv3, etc.)")
     parser.add_argument('--size', type=int, default=128, help="Input image dimension (default: 128 for MCU)")
     parser.add_argument('--num_classes', type=int, default=None,
-                        help="Number of classes (default: 1 for floodvn/floodkaggle, 4 for floodscene, 10 for floodnet)")
+                        help="Number of classes (default: 1 for floodvn/floodkaggle/aifloodsense)")
     parser.add_argument('--loss', type=str, default=None,
                         help="Loss function: bce, dice, focal, ce, ce_dice, lovasz, etc.")
     parser.add_argument('--aux_loss', type=str, default='boundary', choices=['boundary', 'bce', 'dice'])
@@ -134,20 +134,14 @@ def main():
     # Cross-dataset evaluation parameters
     parser.add_argument('--weights', type=str, default=None, help="Checkpoint file path for cross-dataset evaluation")
     parser.add_argument('--source_dataset', type=str, default='floodkaggle')
-    parser.add_argument('--target_datasets', type=str, nargs='+', default=['floodkaggle', 'floodscene'])
+    parser.add_argument('--target_datasets', type=str, nargs='+', default=['floodkaggle', 'aifloodsense'])
 
     args = parser.parse_args()
 
     # Automatically set num_classes and default loss based on dataset if not specified
     if args.num_classes is None:
-        if args.dataset in ['floodvn', 'floodkaggle']:
-            args.num_classes = 1
-        elif args.dataset == 'floodscene':
-            args.num_classes = 4
-        elif args.dataset == 'floodnet':
-            args.num_classes = 10
-        else:
-            args.num_classes = 1
+        # Default to 1 class (Binary Flood Segmentation) for all edge benchmarks
+        args.num_classes = 1
 
     if args.loss is None:
         args.loss = 'bce' if args.num_classes == 1 else 'ce_dice'

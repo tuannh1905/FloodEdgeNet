@@ -22,9 +22,8 @@ A research-grade training, quantization, and benchmarking framework for flood se
 | Dataset | Type | Classes | Loss | Structure / Notes |
 | :--- | :--- | :---: | :--- | :--- |
 | **FloodKaggle** | Binary | 1 | `bce` | Images (`images/`) & Masks (`masks/`) |
-| **FloodScene** | Multi-class / Binary | 4 or 1 | `ce_dice` / `bce` | Classes: background (0), sky (85), building (170), flood (255) |
+| **AIFloodSense** (formerly FloodScene) | Multi-class / Binary | 4 or 1 | `ce_dice` / `bce` | Classes: background (0), sky (85), building (170), flood (255) |
 | **FloodVN** | Binary | 1 | `bce` | Supports both image masks and LabelMe polygon JSON (`labels/*.json`) |
-| **FloodNet** | Multi-class / Binary | 10 or 1 | `ce_dice` / `bce` | High-resolution UAV flood disaster imagery |
 
 ---
 
@@ -59,7 +58,7 @@ python main.py \
 ### 2. Multi-Class Training on FloodScene (4 classes)
 ```bash
 python main.py \
-  --dataset floodscene \
+  --dataset aifloodsense \
   --model flood_edgenet \
   --num_classes 4 \
   --loss ce_dice \
@@ -182,11 +181,13 @@ FPS:  $124.50 \pm 2.10$
 
 ```
 FloodEdgeNet/
+├── FloodEdgeNet_Colab.ipynb    # Ready-to-run Google Colab training & QAT notebook
 ├── main.py                     # Unified CLI entry point (train, multiseed, cross-eval)
 ├── qat.py                      # Quantization-Aware Training engine for MCU deployment
+├── export.py                   # ONNX edge model exporter
 ├── cross_dataset_eval.py       # Cross-dataset generalization benchmark tool
 ├── benchmark.py                # Binary benchmark engine
-├── benchmark_floodscene.py     # Multi-class benchmark engine
+├── benchmark_floodscene.py (AIFloodSense)     # Multi-class benchmark engine
 ├── analyze.py                  # Grad-CAM and Best/Worst prediction analyzer
 ├── models/
 │   ├── flood_edgenet.py        # Proposed FloodEdgeNet architecture

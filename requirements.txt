@@ -9,3 +9,4 @@ gdown
 albumentations
 timm
 matplotlib
+onnx

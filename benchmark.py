@@ -33,18 +33,18 @@ DATASETS = {
         'id': '1uMgjTSxseBuxH65VhLdN_4_rlMihamHa',
         'dir': 'floodkaggle'
     },
+    'aifloodsense': {
+        'id': '12f0UmV46uwzjMyYPpfc_S0fHLRe4LKIf',
+        'dir': 'aifloodsense'
+    },
     'floodscene': {
         'id': '12f0UmV46uwzjMyYPpfc_S0fHLRe4LKIf',
-        'dir': 'floodscene'
+        'dir': 'aifloodsense'
     },
     'floodvn': {
-        'id': '1uMgjTSxseBuxH65VhLdN_4_rlMihamHa',  # fallback / local
+        'id': '1qhmuzxVh5F3xxT8JrPoDEh47ZDKlAqR-',
         'dir': 'floodvn'
     },
-    'floodnet': {
-        'id': '',
-        'dir': 'FloodNet'
-    }
 }
 
 
@@ -214,7 +214,7 @@ def run_multiseed_experiments(args, seeds):
 def main():
     parser = argparse.ArgumentParser(description="Flood Segmentation Benchmarking Suite")
     parser.add_argument('--dataset',      type=str,   default='floodkaggle',
-                        choices=['floodkaggle', 'floodscene', 'floodvn', 'floodnet'])
+                        choices=['floodkaggle', 'aifloodsense', 'floodscene', 'floodvn'])
     parser.add_argument('--model',        type=str,   required=True)
     parser.add_argument('--size',         type=int,   default=128)
     parser.add_argument('--num_classes',  type=int,   default=1)

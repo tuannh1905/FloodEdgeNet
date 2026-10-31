@@ -39,17 +39,23 @@ class DeployModel(nn.Module):
         return out
 
 
-def evaluate_model(model, dataloader, num_classes=1, device='cpu', desc="Evaluating"):
+def evaluate_model(model, dataloader, num_classes=1, device='cpu', desc="Evaluating", criterion=None):
     model.eval()
     all_preds = []
     all_labels = []
+    total_loss = 0.0
 
     with torch.no_grad():
         for images, masks in tqdm(dataloader, desc=desc, leave=False, ncols=100):
             images = images.to(device)
+            masks = masks.to(device)
             outputs = model(images)
             if isinstance(outputs, (list, tuple)):
                 outputs = outputs[0]
+
+            if criterion is not None:
+                loss = criterion(outputs, masks)
+                total_loss += loss.item()
 
             if num_classes == 1:
                 preds = torch.sigmoid(outputs)
@@ -59,37 +65,53 @@ def evaluate_model(model, dataloader, num_classes=1, device='cpu', desc="Evaluat
             all_preds.extend(preds.cpu().numpy())
             all_labels.extend(masks.cpu().numpy())
 
-    return calculate_all_metrics(all_preds, all_labels, num_classes)
+    metrics = calculate_all_metrics(all_preds, all_labels, num_classes)
+    if criterion is not None:
+        metrics['val_loss'] = total_loss / len(dataloader)
+    return metrics
 
 
 def estimate_peak_sram(model, input_size=(1, 3, 128, 128), is_int8=False):
     """
-    Estimates peak activation memory (SRAM buffer) required to execute the largest 
-    intermediate feature map on resource-constrained microcontrollers.
+    Estimates peak activation memory (SRAM buffer / Arena) required on 
+    resource-constrained microcontrollers (CMSIS-NN / TFLite Micro).
+    On MCUs, operator execution requires simultaneous presence of both
+    Input and Output activation tensors (ping-pong buffer), plus intermediate residuals.
     FP32 uses 4 bytes/element; INT8 uses 1 byte/element.
     """
     bytes_per_elem = 1 if is_int8 else 4
-    max_tensor_bytes = 0
+    max_buffer_bytes = 0
 
     def hook(module, inp, out):
-        nonlocal max_tensor_bytes
-        if isinstance(out, torch.Tensor):
-            tensor_bytes = out.numel() * bytes_per_elem
-            if tensor_bytes > max_tensor_bytes:
-                max_tensor_bytes = tensor_bytes
+        nonlocal max_buffer_bytes
+        # Only count leaf operational layers (Conv2d, Linear, Pooling, etc.)
+        if len(list(module.children())) == 0:
+            in_bytes = 0
+            if isinstance(inp, tuple) and len(inp) > 0 and isinstance(inp[0], torch.Tensor):
+                in_bytes = inp[0].numel() * bytes_per_elem
+            out_bytes = 0
+            if isinstance(out, torch.Tensor):
+                out_bytes = out.numel() * bytes_per_elem
+            elif isinstance(out, (list, tuple)) and len(out) > 0 and isinstance(out[0], torch.Tensor):
+                out_bytes = sum(t.numel() * bytes_per_elem for t in out if isinstance(t, torch.Tensor))
+
+            total_op_bytes = in_bytes + out_bytes
+            if total_op_bytes > max_buffer_bytes:
+                max_buffer_bytes = total_op_bytes
 
     hooks = []
     for m in model.modules():
         hooks.append(m.register_forward_hook(hook))
 
-    dummy = torch.randn(input_size)
+    device = next(model.parameters()).device if list(model.parameters()) else torch.device('cpu')
+    dummy = torch.randn(input_size, device=device)
     with torch.no_grad():
         _ = model(dummy)
 
     for h in hooks:
         h.remove()
 
-    return float(max_tensor_bytes / 1024.0)  # in KB
+    return float(max_buffer_bytes / 1024.0)  # in KB
 
 
 def run_qat(args):
@@ -162,9 +184,9 @@ def run_qat(args):
 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-6)
 
-    # 6. QAT Fine-tuning Loop
+    # 6. QAT Fine-tuning Loop (Tracking val_loss for best checkpoint consistency)
     print("\n--- [Phase 3/4] Quantization-Aware Fine-Tuning ---")
-    best_val_miou = 0.0
+    best_val_loss = float('inf')
     best_qat_weights = None
 
     for epoch in range(args.epochs):
@@ -197,16 +219,17 @@ def run_qat(args):
         scheduler.step()
         avg_train_loss = running_loss / len(train_loader)
 
-        # Validation at epoch end
-        val_metrics = evaluate_model(qat_model, val_loader, args.num_classes, device, desc="Val")
+        # Validation at epoch end (Evaluating val_loss)
+        val_metrics = evaluate_model(qat_model, val_loader, args.num_classes, device, desc="Val", criterion=criterion)
+        val_loss = val_metrics['val_loss']
         val_miou = val_metrics['miou']
 
-        print(f"Epoch {epoch+1:2d}/{args.epochs:2d} | Train Loss: {avg_train_loss:.4f} | Val mIoU: {val_miou:.4f} {freeze_status}", end="")
+        print(f"Epoch {epoch+1:2d}/{args.epochs:2d} | Train: {avg_train_loss:.4f} | Val Loss: {val_loss:.4f} | Val IoU: {val_miou:.4f} {freeze_status}", end="")
 
-        if val_miou > best_val_miou:
-            best_val_miou = val_miou
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
             best_qat_weights = copy.deepcopy(qat_model.state_dict())
-            print(" -> [BEST VAL]")
+            print(" -> [BEST VAL LOSS]")
         else:
             print()
 
@@ -277,6 +300,7 @@ def run_qat(args):
     with open(report_json, 'w') as f:
         json.dump({
             'config': vars(args),
+            'best_val_loss': best_val_loss,
             'fp32_metrics': fp32_metrics,
             'int8_metrics': int8_metrics,
             'hardware': {
@@ -302,10 +326,10 @@ def main():
     parser.add_argument('--model', type=str, default='flood_edgenet',
                         help="Model architecture name (default: flood_edgenet)")
     parser.add_argument('--dataset', type=str, default='floodkaggle',
-                        choices=['floodkaggle', 'floodscene', 'floodvn', 'floodnet'])
+                        choices=['floodkaggle', 'aifloodsense', 'floodscene', 'floodvn'])
     parser.add_argument('--size', type=int, default=128, help="Image size (default: 128 for MCU deployment)")
-    parser.add_argument('--num_classes', type=int, default=1)
-    parser.add_argument('--loss', type=str, default='bce')
+    parser.add_argument('--num_classes', type=int, default=None)
+    parser.add_argument('--loss', type=str, default=None)
     parser.add_argument('--epochs', type=int, default=15, help="Number of QAT fine-tuning epochs (default: 15)")
     parser.add_argument('--freeze_bn_epoch', type=int, default=12,
                         help="Epoch to freeze BN stats & quantizer scales (default: 12)")
@@ -317,9 +341,14 @@ def main():
     parser.add_argument('--output_path', type=str, default='outputs')
     args = parser.parse_args()
 
+    if args.num_classes is None:
+        args.num_classes = 1
+
+    if args.loss is None:
+        args.loss = 'bce' if args.num_classes == 1 else 'ce_dice'
+
     run_qat(args)
 
 
 if __name__ == '__main__':
     main()
-

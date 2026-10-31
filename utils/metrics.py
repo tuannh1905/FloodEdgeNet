@@ -271,7 +271,9 @@ def calculate_model_complexity(model, input_size=(1, 3, 512, 512), device='cuda'
 
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    deployable_params = sum(p.numel() for name, p in model.named_parameters() if 'aux' not in name.lower())
     model_size_mb = total_params * 4 / (1024 ** 2)
+    deployable_size_mb = deployable_params * 4 / (1024 ** 2)
 
     device_obj = torch.device(device)
     dummy_input = torch.randn(input_size, device=device_obj)
@@ -324,7 +326,9 @@ def calculate_model_complexity(model, input_size=(1, 3, 512, 512), device='cuda'
     return {
         'total_params': total_params,
         'trainable_params': trainable_params,
+        'deployable_params': deployable_params,
         'model_size_mb': float(model_size_mb),
+        'deployable_size_mb': float(deployable_size_mb),
         'memory_mb': float(memory_allocated),
         'gmacs': float(gmacs),
         'gflops': float(gflops),
