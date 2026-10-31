@@ -10,7 +10,7 @@ from utils.metrics import calculate_all_metrics
 
 
 def evaluate_cross_dataset(model_name, weights_path, source_dataset, target_datasets,
-                           size=256, batch_size=4, num_classes=1, seed=42, output_dir='outputs'):
+                           size=128, batch_size=4, num_classes=1, seed=42, output_dir='outputs'):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("=" * 75)
     print("CROSS-DATASET GENERALIZATION BENCHMARK (ZERO-SHOT DOMAIN TRANSFER)")
@@ -125,7 +125,7 @@ def main():
     parser.add_argument('--source_dataset', type=str, default='floodkaggle', help="Dataset model was trained on")
     parser.add_argument('--target_datasets', type=str, nargs='+', default=['floodkaggle', 'floodscene', 'floodvn'],
                         help="Datasets to evaluate transferability on")
-    parser.add_argument('--size', type=int, default=256)
+    parser.add_argument('--size', type=int, default=128, help="Input size (default: 128 for MCU)")
     parser.add_argument('--batch_size', type=int, default=4)
     parser.add_argument('--num_classes', type=int, default=1)
     parser.add_argument('--seed', type=int, default=42)

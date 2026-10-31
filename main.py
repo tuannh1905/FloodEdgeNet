@@ -112,7 +112,7 @@ def main():
                         choices=['floodvn', 'floodkaggle', 'floodscene', 'floodnet'])
     parser.add_argument('--model', type=str, default='flood_edgenet',
                         help="Model architecture name (e.g. flood_edgenet, unet, deeplabv3, etc.)")
-    parser.add_argument('--size', type=int, default=256, help="Input image dimension (default: 256)")
+    parser.add_argument('--size', type=int, default=128, help="Input image dimension (default: 128 for MCU)")
     parser.add_argument('--num_classes', type=int, default=None,
                         help="Number of classes (default: 1 for floodvn/floodkaggle, 4 for floodscene, 10 for floodnet)")
     parser.add_argument('--loss', type=str, default=None,

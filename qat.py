@@ -62,7 +62,7 @@ def evaluate_model(model, dataloader, num_classes=1, device='cpu', desc="Evaluat
     return calculate_all_metrics(all_preds, all_labels, num_classes)
 
 
-def estimate_peak_sram(model, input_size=(1, 3, 256, 256), is_int8=False):
+def estimate_peak_sram(model, input_size=(1, 3, 128, 128), is_int8=False):
     """
     Estimates peak activation memory (SRAM buffer) required to execute the largest 
     intermediate feature map on resource-constrained microcontrollers.
@@ -303,7 +303,7 @@ def main():
                         help="Model architecture name (default: flood_edgenet)")
     parser.add_argument('--dataset', type=str, default='floodkaggle',
                         choices=['floodkaggle', 'floodscene', 'floodvn', 'floodnet'])
-    parser.add_argument('--size', type=int, default=256, help="Image size (default: 256)")
+    parser.add_argument('--size', type=int, default=128, help="Image size (default: 128 for MCU deployment)")
     parser.add_argument('--num_classes', type=int, default=1)
     parser.add_argument('--loss', type=str, default='bce')
     parser.add_argument('--epochs', type=int, default=15, help="Number of QAT fine-tuning epochs (default: 15)")
@@ -322,3 +322,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
