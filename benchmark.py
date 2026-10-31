@@ -54,20 +54,32 @@ def download_dataset(name):
         return
     cfg = DATASETS[name]
     folder = cfg['dir']
-    if os.path.exists(folder):
-        print(f"{name} exists at '{folder}'. Skipping download.")
+    if os.path.exists(folder) and len(os.listdir(folder)) > 0:
+        print(f"Dataset '{name}' already exists at '{folder}'. Skipping download.")
         return
     if not cfg['id']:
         print(f"Manual setup required for {name}. Please place files in '{folder}'.")
         return
-    url = f'https://drive.google.com/uc?id={cfg["id"]}'
     output = f'{name}.zip'
-    print(f"Downloading {name}...")
-    gdown.download(url, output, quiet=False)
+    print(f"Downloading {name} (ID: {cfg['id']})...")
+    try:
+        gdown.download(id=cfg['id'], output=output, quiet=False, fuzzy=True)
+    except Exception as e:
+        print(f"[INFO] Direct ID download failed, trying standard URL: {e}")
+        url = f'https://drive.google.com/uc?id={cfg["id"]}'
+        gdown.download(url, output, quiet=False)
+
+    if not os.path.exists(output) or not zipfile.is_zipfile(output):
+        print(f"[ERROR] Downloaded file for '{name}' is not a valid zip archive. Please verify Google Drive sharing permissions.")
+        if os.path.exists(output):
+            os.remove(output)
+        return
+
+    os.makedirs(folder, exist_ok=True)
     with zipfile.ZipFile(output, 'r') as z:
         z.extractall(folder)
     os.remove(output)
-    print(f"[OK] {name} ready.")
+    print(f"[OK] {name} extracted and ready in '{folder}'.")
 
 
 def verify_reproducibility(args, num_runs=2):
