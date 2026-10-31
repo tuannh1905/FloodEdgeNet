@@ -215,21 +215,24 @@ def get_dataloaders(dataset, batch_size=4, size=256, seed=42, num_classes=1, dat
     g = torch.Generator()
     g.manual_seed(seed)
 
+    # Optimal workers for Colab / Edge CPU (avoids IPC/shared memory overhead)
+    workers = min(2, os.cpu_count() or 2)
+
     train_loader = DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True,
-        num_workers=4, pin_memory=torch.cuda.is_available(),
+        num_workers=workers, pin_memory=torch.cuda.is_available(),
         drop_last=True, worker_init_fn=seed_worker,
         generator=g, persistent_workers=False
     )
     val_loader = DataLoader(
         val_dataset, batch_size=batch_size, shuffle=False,
-        num_workers=4, pin_memory=torch.cuda.is_available(),
+        num_workers=workers, pin_memory=torch.cuda.is_available(),
         drop_last=False, worker_init_fn=seed_worker,
         persistent_workers=False
     )
     test_loader = DataLoader(
         test_dataset, batch_size=batch_size, shuffle=False,
-        num_workers=4, pin_memory=torch.cuda.is_available(),
+        num_workers=workers, pin_memory=torch.cuda.is_available(),
         drop_last=False, worker_init_fn=seed_worker,
         persistent_workers=False
     )
