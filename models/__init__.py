@@ -3,17 +3,21 @@ import torch
 import importlib
 import inspect
 
+AUTO_PRETRAINED_MODELS = {'deeplabv3'}
 
-def get_model(model_name, num_classes=1, seed=None, input_size=256, pretrained=False):
+
+def get_model(model_name, num_classes=1, seed=None, input_size=256, pretrained=None):
     """
     Initialize model with DETERMINISTIC weights.
+    Automatically detects heavy baseline architectures that require ImageNet pretrained weights.
 
     Args:
         model_name: Name of model architecture (e.g. flood_edgenet, unet, deeplabv3, etc.)
         num_classes: Number of output classes
         seed:        Random seed (REQUIRED for reproducibility)
-        input_size:  Input image size (phải chia hết cho 16)
-        pretrained:  Load pretrained backbone weights if supported (e.g. ImageNet for heavy baselines)
+        input_size:  Input image size (must be divisible by 16)
+        pretrained:  Load pretrained backbone weights if supported (e.g. ImageNet for heavy baselines).
+                     If None, automatically enables for architectures in AUTO_PRETRAINED_MODELS.
     """
     if input_size % 16 != 0:
         raise ValueError(
@@ -27,6 +31,12 @@ def get_model(model_name, num_classes=1, seed=None, input_size=256, pretrained=F
         'fsenet': 'flood_edgenet',
     }
     canonical_name = alias_map.get(model_name.lower(), model_name)
+
+    # Auto-detect pretrained requirement
+    if pretrained is None:
+        pretrained = canonical_name.lower() in AUTO_PRETRAINED_MODELS
+    elif not pretrained and canonical_name.lower() in AUTO_PRETRAINED_MODELS:
+        pretrained = True
 
     model_file = os.path.join(os.path.dirname(__file__), f'{canonical_name}.py')
     if not os.path.exists(model_file):

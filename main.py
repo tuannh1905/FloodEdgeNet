@@ -146,6 +146,12 @@ def main():
     if args.loss is None:
         args.loss = 'bce' if args.num_classes == 1 else 'ce_dice'
 
+    # Auto-detect models that require pretrained weights (e.g. DeepLabV3 with heavy ResNet backbone)
+    AUTO_PRETRAINED_MODELS = {'deeplabv3'}
+    if args.model.lower() in AUTO_PRETRAINED_MODELS and not args.pretrained:
+        args.pretrained = True
+        print(f"[AUTO-PRETRAIN] Model '{args.model}' has a heavy ImageNet backbone. Automatically enabled --pretrained!")
+
     set_seed(args.seed)
 
     if args.download:
