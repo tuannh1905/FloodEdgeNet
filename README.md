@@ -42,12 +42,12 @@ pip install -r requirements.txt
 
 ## 🚀 Quick Start
 
-### 1. Training Proposed Model (`fsenet`)
+### 1. Training Proposed Model (`flood_edgenet`)
 ```bash
 # Single-seed training
 python main.py \
   --dataset floodkaggle \
-  --model fsenet \
+  --model flood_edgenet \
   --loss bce \
   --epochs 50 \
   --batch_size 4 \
@@ -59,7 +59,7 @@ python main.py \
 ```bash
 python main.py \
   --dataset floodscene \
-  --model fsenet \
+  --model flood_edgenet \
   --num_classes 4 \
   --loss ce_dice \
   --epochs 50 \
@@ -117,7 +117,7 @@ All major real-time and heavy segmentation baselines are supported:
 
 | Category | Model Name | Description |
 | :--- | :--- | :--- |
-| **Proposed** | `fsenet` | Ultra-lightweight edge flood segmentation network (~0.14M deployable params) |
+| **Proposed** | `flood_edgenet` | **FloodEdgeNet**: Ultra-lightweight edge flood segmentation network (~0.14M deployable params) |
 | **Lightweight Baselines** | `fast-scnn`, `espnetv2`, `stdc1`, `dabnet`, `edanet`, `enet`, `ulite` | Real-time edge architectures |
 | **Classic Baselines** | `unet`, `segnet` | Canonical segmentation backbones |
 | **Heavy Baselines** | `deeplabv3`, `segformer` | Deep baselines (supports `--pretrained` for ImageNet backbone initialization) |
@@ -164,7 +164,7 @@ MambaFloodLite/
 ├── benchmark_floodscene.py     # Multi-class benchmark engine
 ├── analyze.py                  # Grad-CAM and Best/Worst prediction analyzer
 ├── models/
-│   ├── fsenet.py               # Proposed FSENet architecture (clean reference)
+│   ├── flood_edgenet.py        # Proposed FloodEdgeNet architecture
 │   ├── deeplabv3.py            # DeepLabV3 (supports --pretrained)
 │   ├── segformer.py            # SegFormer MiT backbone
 │   ├── unet.py, segnet.py      # Classic baselines

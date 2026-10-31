@@ -132,8 +132,15 @@ class AuxiliaryBoundaryHead(nn.Module):
         return F.interpolate(out, size=output_size, mode="bilinear", align_corners=False)
 
 
-class FSENet(nn.Module):
-    # aux_head included: ~0.22M params (training). Dropped for deployment: ~0.14M params.
+class FloodEdgeNet(nn.Module):
+    """
+    FloodEdgeNet: An Ultra-Lightweight Edge-Aware Network for Real-Time 
+    Street-Level Flood Segmentation on Microcontrollers and Edge Cameras.
+
+    - Architecture: Pure Depthwise-Separable CNN optimized for INT8 QAT.
+    - Parameters: ~0.22M (with Auxiliary Boundary Head for training),
+                  ~0.14M (deployable on edge microcontrollers).
+    """
     ENCODER_CHANNELS = (32, 64, 128, 128, 128)  # stem, e1, e2, e3, e4
     DECODER_CHANNELS = (128, 64, 32, 16)        # d4, d3, d2, d1
 
@@ -181,5 +188,9 @@ class FSENet(nn.Module):
         return (main_out, aux_out) if self.training else main_out
 
 
-def build_model(num_classes: int = 1, **kwargs) -> FSENet:
-    return FSENet(num_classes=num_classes, **kwargs)
+# Backward compatibility alias
+FSENet = FloodEdgeNet
+
+
+def build_model(num_classes: int = 1, **kwargs) -> FloodEdgeNet:
+    return FloodEdgeNet(num_classes=num_classes, **kwargs)

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from models.fsenet import EncoderStage, SerialBottleneck, DecoderStage
+from models.flood_edgenet import EncoderStage, SerialBottleneck, DecoderStage
 
 
 class FSENetNoAux(nn.Module):

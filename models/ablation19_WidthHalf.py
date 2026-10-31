@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from models.fsenet import EncoderStage, SerialBottleneck, DecoderStage, AuxiliaryBoundaryHead
+from models.flood_edgenet import EncoderStage, SerialBottleneck, DecoderStage, AuxiliaryBoundaryHead
 
 
 def make_divisible(value: float, divisor: int = 8) -> int:

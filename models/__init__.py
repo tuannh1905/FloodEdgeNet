@@ -9,7 +9,7 @@ def get_model(model_name, num_classes=1, seed=None, input_size=256, pretrained=F
     Initialize model with DETERMINISTIC weights.
 
     Args:
-        model_name: Name of model architecture
+        model_name: Name of model architecture (e.g. flood_edgenet, unet, deeplabv3, etc.)
         num_classes: Number of output classes
         seed:        Random seed (REQUIRED for reproducibility)
         input_size:  Input image size (phải chia hết cho 16)
@@ -21,7 +21,14 @@ def get_model(model_name, num_classes=1, seed=None, input_size=256, pretrained=F
             f"(do các tầng Downsampling trong encoder)."
         )
 
-    model_file = os.path.join(os.path.dirname(__file__), f'{model_name}.py')
+    # Normalize model name aliases
+    alias_map = {
+        'floodedgenet': 'flood_edgenet',
+        'fsenet': 'flood_edgenet',
+    }
+    canonical_name = alias_map.get(model_name.lower(), model_name)
+
+    model_file = os.path.join(os.path.dirname(__file__), f'{canonical_name}.py')
     if not os.path.exists(model_file):
         available = [
             f.replace('.py', '')
@@ -40,7 +47,7 @@ def get_model(model_name, num_classes=1, seed=None, input_size=256, pretrained=F
             torch.cuda.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
 
-    module = importlib.import_module(f'models.{model_name}')
+    module = importlib.import_module(f'models.{canonical_name}')
 
     sig = inspect.signature(module.build_model)
     kwargs = {'num_classes': num_classes}
@@ -52,6 +59,6 @@ def get_model(model_name, num_classes=1, seed=None, input_size=256, pretrained=F
     model = module.build_model(**kwargs)
 
     if seed is not None:
-        print(f"[OK] Model '{model_name}' initialized with seed {seed} (pretrained={pretrained})")
+        print(f"[OK] Model '{canonical_name}' initialized with seed {seed} (pretrained={pretrained})")
 
     return model

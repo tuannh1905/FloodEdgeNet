@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from models.fsenet import DepthwiseConvBN, SerialDepthwiseBlock, SerialBottleneck, DecoderStage, AuxiliaryBoundaryHead
+from models.flood_edgenet import DepthwiseConvBN, SerialDepthwiseBlock, SerialBottleneck, DecoderStage, AuxiliaryBoundaryHead
 
 
 class StridedDepthwiseConvBN(nn.Module):

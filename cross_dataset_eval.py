@@ -120,7 +120,7 @@ def evaluate_cross_dataset(model_name, weights_path, source_dataset, target_data
 
 def main():
     parser = argparse.ArgumentParser(description="Cross-Dataset Generalization Evaluation Tool")
-    parser.add_argument('--model', type=str, required=True, help="Model name (e.g. fsenet, unet, fast-scnn)")
+    parser.add_argument('--model', type=str, default='flood_edgenet', help="Model name (e.g. flood_edgenet, unet, fast-scnn)")
     parser.add_argument('--weights', type=str, required=True, help="Path to trained checkpoint (.pth)")
     parser.add_argument('--source_dataset', type=str, default='floodkaggle', help="Dataset model was trained on")
     parser.add_argument('--target_datasets', type=str, nargs='+', default=['floodkaggle', 'floodscene', 'floodvn'],

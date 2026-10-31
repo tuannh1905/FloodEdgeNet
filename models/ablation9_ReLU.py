@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.fsenet import DepthwiseConvBN
+from models.flood_edgenet import DepthwiseConvBN
 
 
 class NearestUpsampleRefineReLU(nn.Module):
