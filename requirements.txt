@@ -10,3 +10,4 @@ albumentations
 timm
 matplotlib
 onnx
+onnxscript
