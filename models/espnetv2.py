@@ -41,6 +41,7 @@ class EESP(nn.Module):
     def __init__(self, nIn, nOut, stride=1, k=4, r_lim=7):
         super(EESP, self).__init__()
         self.stride = stride
+        self.has_residual = (stride == 1 and nIn == nOut)
         n = nOut // k
         n1 = nOut - (k - 1) * n
         self.proj_1x1 = nn.Sequential(nn.Conv2d(nIn, n, 1, bias=False), nn.BatchNorm2d(n), nn.PReLU(n))
@@ -60,7 +61,8 @@ class EESP(nn.Module):
         for i in range(1, len(self.s_pyramid)):
             output.append(self.s_pyramid[i](out_1x1) + output[i-1])
         output = self.pw_1x1(self.merge(torch.cat(output, 1)))
-        if self.stride == 1 and x.shape == output.shape: output = output + x
+        if self.has_residual:
+            output = output + x
         return self.act(output)
 
 class DownSampler(nn.Module):
@@ -69,8 +71,7 @@ class DownSampler(nn.Module):
         self.eesp = EESP(in_channels + 3, out_channels, stride=2)
     def forward(self, x, x_img):
         # Input reinforcement: Ghép ảnh gốc đã thu nhỏ vào feature map
-        if x_img.size(2) != x.size(2):
-            x_img = F.interpolate(x_img, size=x.size()[2:], mode='bilinear', align_corners=True)
+        x_img = F.interpolate(x_img, size=x.shape[2:], mode='bilinear', align_corners=True)
         return self.eesp(torch.cat([x, x_img], 1))
 
 

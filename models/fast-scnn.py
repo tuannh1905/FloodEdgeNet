@@ -79,25 +79,22 @@ class PyramidPooling(nn.Module):
         self.conv4 = _ConvBNReLU(in_channels, inter_channels, 1, **kwargs)
         self.out = _ConvBNReLU(in_channels * 2, out_channels, 1)
 
-        # ✓ CHỈ SỬA Ở ĐÂY: Tránh AdaptivePool(6) cho ảnh 128x128 (feature map 4x4)
+        # Pool sizes for feature pyramid
         if input_size == 128:
             self.pool_sizes = (1, 2, 3, 4)
         else:
             self.pool_sizes = (1, 2, 3, 6) # Original paper sizes
-
-    def pool(self, x, size):
-        avgpool = nn.AdaptiveAvgPool2d(size)
-        return avgpool(x)
+        self.pools = nn.ModuleList([nn.AdaptiveAvgPool2d(s) for s in self.pool_sizes])
 
     def upsample(self, x, size):
         return F.interpolate(x, size, mode='bilinear', align_corners=True)
 
     def forward(self, x):
         size = x.size()[2:]
-        feat1 = self.upsample(self.conv1(self.pool(x, self.pool_sizes[0])), size)
-        feat2 = self.upsample(self.conv2(self.pool(x, self.pool_sizes[1])), size)
-        feat3 = self.upsample(self.conv3(self.pool(x, self.pool_sizes[2])), size)
-        feat4 = self.upsample(self.conv4(self.pool(x, self.pool_sizes[3])), size)
+        feat1 = self.upsample(self.conv1(self.pools[0](x)), size)
+        feat2 = self.upsample(self.conv2(self.pools[1](x)), size)
+        feat3 = self.upsample(self.conv3(self.pools[2](x)), size)
+        feat4 = self.upsample(self.conv4(self.pools[3](x)), size)
         x = torch.cat([x, feat1, feat2, feat3, feat4], dim=1)
         x = self.out(x)
         return x

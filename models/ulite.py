@@ -5,8 +5,10 @@ class AxialDW(nn.Module):
     def __init__(self, dim, mixer_kernel, dilation = 1):
         super().__init__()
         h, w = mixer_kernel
-        self.dw_h = nn.Conv2d(dim, dim, kernel_size=(h, 1), padding='same', groups = dim, dilation = dilation)
-        self.dw_w = nn.Conv2d(dim, dim, kernel_size=(1, w), padding='same', groups = dim, dilation = dilation)
+        pad_h = (dilation * (h - 1)) // 2
+        pad_w = (dilation * (w - 1)) // 2
+        self.dw_h = nn.Conv2d(dim, dim, kernel_size=(h, 1), padding=(pad_h, 0), groups = dim, dilation = dilation)
+        self.dw_w = nn.Conv2d(dim, dim, kernel_size=(1, w), padding=(0, pad_w), groups = dim, dilation = dilation)
 
     def forward(self, x):
         x = x + self.dw_h(x) + self.dw_w(x)
@@ -71,7 +73,7 @@ class ULiteModel(nn.Module):
         if input_size % 32 != 0:
             raise ValueError(f"ULite yêu cầu input_size chia hết cho 32. Kích thước {input_size} không hợp lệ.")
 
-        self.conv_in = nn.Conv2d(3, 16, kernel_size=7, padding='same')
+        self.conv_in = nn.Conv2d(3, 16, kernel_size=7, padding=3)
         self.e1 = EncoderBlock(16, 32)
         self.e2 = EncoderBlock(32, 64)
         self.e3 = EncoderBlock(64, 128)

@@ -87,16 +87,15 @@ class DownsamplingBottleneck(nn.Module):
         self.out_activation = nn.PReLU()
 
         self.out_channels = out_channels
+        self.pad_ch = out_channels - in_channels
 
     def forward(self, x):
         # Main branch
         main, max_indices = self.main_maxpool(x)
 
         # Zero-pad channels để match out_channels
-        n, ch, h, w = main.size()
-        pad_ch = self.out_channels - ch
-        if pad_ch > 0:
-            padding = torch.zeros(n, pad_ch, h, w, device=x.device, dtype=x.dtype)
+        if self.pad_ch > 0:
+            padding = torch.zeros((x.size(0), self.pad_ch, main.size(2), main.size(3)), device=x.device, dtype=x.dtype)
             main = torch.cat([main, padding], dim=1)
 
         # Extension branch

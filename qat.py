@@ -167,13 +167,32 @@ def run_qat(args):
     deploy_model = DeployModel(base_model)
     deploy_model.eval()
 
-    dummy_input = torch.randn(1, 3, args.size, args.size)
+    dummy_input = torch.randn(2, 3, args.size, args.size)
     qconfig_mapping = tq.get_default_qat_qconfig_mapping('qnnpack')
 
-    # Prepare QAT Graph
-    qat_model = prepare_qat_fx(deploy_model, qconfig_mapping, (dummy_input,))
-    qat_model = qat_model.to(device)
-    print("[OK] QAT Graph successfully prepared with FakeQuantize layers!")
+    try:
+        qat_model = prepare_qat_fx(deploy_model, qconfig_mapping, (dummy_input,))
+        qat_model = qat_model.to(device)
+        print("[OK] QAT Graph successfully prepared with FakeQuantize layers!")
+    except Exception as e:
+        print(f"[WARN] Architecture '{args.model}' is not supported by PyTorch FX Graph Mode ({e}).")
+        print(f"       Skipping QAT fine-tuning for this architecture and preserving FP32 baseline.")
+        os.makedirs(args.output_path, exist_ok=True)
+        report_json = os.path.join(args.output_path, f"{args.model}_qat_benchmark_{args.dataset}.json")
+        with open(report_json, 'w') as f:
+            json.dump({
+                'config': vars(args),
+                'qat_supported': False,
+                'fp32_metrics': fp32_metrics,
+                'hardware': {
+                    'fp32_flash_kb': os.path.getsize(args.weights) / 1024.0,
+                    'fp32_peak_sram_kb': fp32_peak_sram,
+                    'fp32_latency_ms': fp32_latency['latency_ms'],
+                    'fp32_fps': fp32_latency['fps'],
+                }
+            }, f, indent=2)
+        print(f"[OK] Benchmark report saved: {report_json}\n")
+        return
 
     # 5. Setup QAT Optimizer & Scheduler
     criterion = get_loss(args.loss, num_classes=args.num_classes).to(device)
@@ -224,12 +243,12 @@ def run_qat(args):
         val_loss = val_metrics['val_loss']
         val_miou = val_metrics['miou']
 
-        print(f"Epoch {epoch+1:2d}/{args.epochs:2d} | Train: {avg_train_loss:.4f} | Val Loss: {val_loss:.4f} | Val IoU: {val_miou:.4f} {freeze_status}", end="")
+        print(f"Epoch {epoch+1:2d}/{args.epochs:2d} | Train: {avg_train_loss:.4f} | Val Loss: {val_loss:.4f} | Val mIoU: {val_miou:.4f} {freeze_status}", end="")
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_qat_weights = copy.deepcopy(qat_model.state_dict())
-            print(" -> [BEST VAL LOSS]")
+            print(" -> [BEST VAL]")
         else:
             print()
 
@@ -241,8 +260,16 @@ def run_qat(args):
     print("\n--- [Phase 4/4] Converting FakeQuantize to True INT8 Hardware Graph ---")
     qat_model.eval()
     qat_model = qat_model.cpu()
-    int8_model = convert_fx(qat_model)
-    print("[OK] Conversion complete! Model converted to true Integer-Only operations.")
+
+    try:
+        int8_model = convert_fx(qat_model)
+        print("[OK] Conversion complete! Model converted to true Integer-Only operations.")
+    except Exception as e:
+        print(f"[WARN] Failed to convert FX graph to native INT8 ({e}). Saving calibrated QAT weights.")
+        os.makedirs(args.output_path, exist_ok=True)
+        int8_pth_path = os.path.join(args.output_path, f"{args.model}_qat_weights_{args.dataset}.pth")
+        torch.save(qat_model.state_dict(), int8_pth_path)
+        return
 
     # 8. True INT8 Evaluation on Test Set
     int8_metrics = evaluate_model(int8_model, test_loader, args.num_classes, device='cpu', desc="INT8 Test")
@@ -300,6 +327,7 @@ def run_qat(args):
     with open(report_json, 'w') as f:
         json.dump({
             'config': vars(args),
+            'qat_supported': True,
             'best_val_loss': best_val_loss,
             'fp32_metrics': fp32_metrics,
             'int8_metrics': int8_metrics,
