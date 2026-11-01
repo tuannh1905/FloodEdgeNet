@@ -29,6 +29,10 @@ def get_model(model_name, num_classes=1, seed=None, input_size=256, pretrained=N
     alias_map = {
         'floodedgenet': 'flood_edgenet',
         'fsenet': 'flood_edgenet',
+        'fast_scnn': 'fast-scnn',
+        'u_lite': 'ulite',
+        'u-lite': 'ulite',
+        'stdc': 'stdc1',
     }
     canonical_name = alias_map.get(model_name.lower(), model_name)
 
